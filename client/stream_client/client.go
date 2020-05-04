@@ -6,7 +6,7 @@ import (
 	"log"
 
 	pb "github.com/Songkun007/go-grpc-example/proto"
-	"google.goland.org/grpc"
+	"google.golang.org/grpc"
 )
 
 const (
