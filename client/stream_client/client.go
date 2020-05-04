@@ -15,7 +15,7 @@ const (
 
 func main() {
 	// 建立连接
-	conn, err := grpc.Dail(":" + PORT, grpc.WithInsecure())
+	conn, err := grpc.Dial(":" + PORT, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("grpc.Dial err: %v", err)
 	}
