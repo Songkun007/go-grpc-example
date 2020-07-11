@@ -6,6 +6,8 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"time"
 
 	pb "github.com/Songkun007/go-grpc-example/proto"
 	"google.golang.org/grpc"
@@ -15,6 +17,12 @@ import (
 const PORT = "9001"
 
 func main() {
+	httpClient := &http.Client{
+		Transport: trans,
+		Timeout:   config.Client_Timeout * time.Millisecond,
+	}
+
+
 	// 基于 CA 进行 TLS 认证
 	cert, err := tls.LoadX509KeyPair("../../conf/client/client.pem", "../../conf/client/client.key")
 	if err != nil {
@@ -30,7 +38,7 @@ func main() {
 	if ok := certPool.AppendCertsFromPEM(ca); !ok {
 		log.Fatalf("certPool.AppendCertsFromPEM err")
 	}
-	
+
 	c := credentials.NewTLS(&tls.Config{
 		Certificates: []tls.Certificate{cert},
 		ServerName:   "go-grpc-example",

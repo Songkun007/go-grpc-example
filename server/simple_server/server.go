@@ -7,10 +7,15 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
+	"runtime/debug"
 
 	pb "github.com/Songkun007/go-grpc-example/proto"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/codes"
+	"github.com/grpc-ecosystem/go-grpc-middleware"
 )
 
 type SearchService struct{}
@@ -47,7 +52,16 @@ func main() {
 		ClientCAs:    certPool,
 	})
 
-	server := grpc.NewServer(grpc.Creds(c))
+	opts := []grpc.ServerOption{
+		grpc.Creds(c),
+		grpc_middleware.WithUnaryServerChain(
+			RecoveryInterceptor,
+			LoggingInterceptor,
+		),
+	}
+
+
+	server := grpc.NewServer(opts...)
 	// 将 SearchService（其包含需要被调用的服务端接口）注册到 gRPC Server 的内部注册中心。
 	// 这样可以在接受到请求时，通过内部的服务发现，发现该服务端接口并转接进行逻辑处理
 	pb.RegisterSearchServiceServer(server, &SearchService{})
@@ -60,4 +74,32 @@ func main() {
 
 	// gRPC Server 开始 lis.Accept，直到 Stop 或 GracefulStop
 	server.Serve(lis)
+}
+
+// 拦截器
+
+// logging
+// 实现 RPC 方法的入参出参的日志输出
+// ctx context.Context：请求上下文
+// req interface{}：RPC 方法的请求参数
+// info *UnaryServerInfo：RPC 方法的所有信息
+// handler UnaryHandler：RPC 方法本身
+func LoggingInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	log.Printf("gRPC method: %s, %v", info.FullMethod, req)
+	resp, err := handler(ctx, req)
+	log.Printf("gRPC method: %s, %v", info.FullMethod, resp)
+	return resp, err
+}
+
+// recover
+// RPC 方法的异常保护和日志输出
+func RecoveryInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			debug.PrintStack()
+			err = status.Errorf(codes.Internal, "Panic err: %v", e)
+		}
+	}()
+
+	return handler(ctx, req)
 }
