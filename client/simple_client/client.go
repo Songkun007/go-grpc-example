@@ -22,7 +22,6 @@ func main() {
 		Timeout:   config.Client_Timeout * time.Millisecond,
 	}
 
-
 	// 基于 CA 进行 TLS 认证
 	cert, err := tls.LoadX509KeyPair("../../conf/client/client.pem", "../../conf/client/client.key")
 	if err != nil {
